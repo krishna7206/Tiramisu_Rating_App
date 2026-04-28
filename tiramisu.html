@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tiramisù Bengaluru — Find the City's Best</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --cream: #F9F3E8;
+    --espresso: #2C1A0E;
+    --cocoa: #6B3F22;
+    --gold: #C8942A;
+    --dust: #E8D9C0;
+    --text: #1A1008;
+    --muted: #7A6555;
+    --card-bg: #FFFCF5;
+    --border: rgba(107,63,34,0.15);
+    --star-active: #C8942A;
+    --star-empty: #DDD0BB;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─────────────────────────────── */
+  header {
+    background: var(--espresso);
+    padding: 4rem 2rem 2.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(45deg,rgba(200,148,42,0.04) 0px,rgba(200,148,42,0.04) 1px,transparent 1px,transparent 8px);
+    pointer-events: none;
+  }
+  .header-tag {
+    font-size: 11px; font-weight: 500; letter-spacing: 0.28em;
+    color: var(--gold); text-transform: uppercase; margin-bottom: 0.9rem;
+    opacity: 0; animation: fadeDown 0.6s 0.1s ease forwards;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(2.6rem, 6vw, 4rem);
+    font-weight: 700; color: #FFF8EE; line-height: 1.1;
+    opacity: 0; animation: fadeDown 0.6s 0.2s ease forwards;
+  }
+  header h1 em { font-style: italic; color: var(--gold); }
+  header > p {
+    margin-top: 0.85rem; font-size: 15px;
+    color: rgba(255,248,238,0.5); font-weight: 300;
+    opacity: 0; animation: fadeDown 0.6s 0.3s ease forwards;
+  }
+  .header-stats {
+    display: flex; justify-content: center; gap: 3rem;
+    margin-top: 2.5rem; padding-top: 1.75rem;
+    border-top: 1px solid rgba(200,148,42,0.2);
+    opacity: 0; animation: fadeDown 0.6s 0.4s ease forwards;
+  }
+  .stat { text-align: center; }
+  .stat-num { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); font-weight: 700; line-height: 1; }
+  .stat-label { font-size: 11px; color: rgba(255,248,238,0.4); letter-spacing: 0.12em; margin-top: 4px; text-transform: uppercase; }
+  .header-cta { margin-top: 1.75rem; opacity: 0; animation: fadeDown 0.6s 0.5s ease forwards; }
+  .header-cta a {
+    display: inline-block; font-size: 13px; font-weight: 500;
+    color: var(--espresso); background: var(--gold);
+    padding: 10px 28px; border-radius: 99px; text-decoration: none;
+    letter-spacing: 0.04em; transition: opacity 0.15s, transform 0.15s;
+  }
+  .header-cta a:hover { opacity: 0.88; transform: translateY(-1px); }
+  @keyframes fadeDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ─── MAIN ───────────────────────────────── */
+  main { max-width: 920px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+
+  .section-head {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 1.5rem; flex-wrap: wrap; gap: 8px;
+  }
+  .section-head h2 { font-family: 'Playfair Display', serif; font-size: 1.55rem; font-weight: 700; color: var(--espresso); }
+  .section-head span { font-size: 13px; color: var(--muted); }
+
+  .controls { display: flex; gap: 8px; margin-bottom: 1.75rem; flex-wrap: wrap; }
+  .pill {
+    padding: 7px 18px; border-radius: 99px; border: 1px solid var(--border);
+    background: transparent; font-family: 'DM Sans', sans-serif;
+    font-size: 13px; color: var(--muted); cursor: pointer; transition: all 0.15s;
+  }
+  .pill:hover { border-color: var(--cocoa); color: var(--cocoa); }
+  .pill.active { background: var(--espresso); color: #FFF8EE; border-color: var(--espresso); }
+
+  /* ─── CARDS ──────────────────────────────── */
+  .cards { display: flex; flex-direction: column; }
+  .card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.4rem 1.5rem;
+    display: grid; grid-template-columns: 32px 1fr auto;
+    gap: 1.25rem; align-items: start; margin-bottom: 10px;
+    transition: box-shadow 0.2s, transform 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .card:hover { box-shadow: 0 6px 28px rgba(44,26,14,0.09); transform: translateY(-1px); }
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  .rank { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-style: italic; color: var(--dust); text-align: center; padding-top: 3px; user-select: none; }
+  .rank.top { color: var(--gold); }
+  .card-name { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; color: var(--espresso); margin-bottom: 3px; }
+  .card-place { font-size: 13px; color: var(--muted); margin-bottom: 9px; }
+  .card-notes { font-size: 13.5px; color: var(--cocoa); font-style: italic; line-height: 1.55; margin-bottom: 10px; }
+  .card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .tag { font-size: 11px; padding: 3px 11px; border-radius: 99px; background: var(--dust); color: var(--cocoa); font-weight: 500; letter-spacing: 0.03em; }
+  .sub-detail { font-size: 12px; color: var(--muted); }
+  .card-score { text-align: right; min-width: 60px; }
+  .score-num { font-family: 'Playfair Display', serif; font-size: 2.1rem; font-weight: 700; color: var(--espresso); line-height: 1; }
+  .score-denom { font-size: 11px; color: var(--muted); margin-top: 1px; }
+  .stars-row { margin-top: 5px; display: flex; gap: 2px; justify-content: flex-end; }
+  .star { font-size: 12px; }
+  .star.on { color: var(--star-active); }
+  .star.off { color: var(--star-empty); }
+
+  /* ─── LOADING SKELETON ───────────────────── */
+  .skeleton {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 14px; padding: 1.4rem 1.5rem; margin-bottom: 10px;
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  .skel-line {
+    height: 14px; border-radius: 99px; background: var(--dust);
+    animation: shimmer 1.4s ease-in-out infinite;
+  }
+  @keyframes shimmer { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+
+  /* ─── DIVIDER ────────────────────────────── */
+  .divider { display: flex; align-items: center; gap: 1rem; margin: 3rem 0 2.5rem; }
+  .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  .divider span { font-family: 'Playfair Display', serif; font-style: italic; font-size: 14px; color: var(--muted); white-space: nowrap; }
+
+  /* ─── CONFIG BANNER ──────────────────────── */
+  .config-banner {
+    background: #FFF3CD; border: 1px solid #f0d87c;
+    border-radius: 10px; padding: 1rem 1.25rem;
+    font-size: 13.5px; color: #7B6000; margin-bottom: 1.5rem; display: none;
+  }
+  .config-banner code { background: rgba(0,0,0,0.07); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+
+  /* ─── FORM ───────────────────────────────── */
+  .form-card {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 18px; padding: 2.25rem 2rem; scroll-margin-top: 2rem;
+  }
+  .form-card h2 { font-family: 'Playfair Display', serif; font-size: 1.5rem; font-weight: 700; color: var(--espresso); margin-bottom: 0.3rem; }
+  .form-card > p { font-size: 14px; color: var(--muted); margin-bottom: 1.75rem; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field.full { grid-column: 1 / -1; }
+  label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; }
+
+  input[type="text"], textarea, select {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; color: var(--text);
+    background: var(--cream); border: 1px solid var(--border);
+    border-radius: 9px; padding: 11px 14px; outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s; width: 100%;
+    appearance: none; -webkit-appearance: none;
+  }
+  input[type="text"]:focus, textarea:focus, select:focus {
+    border-color: var(--cocoa); box-shadow: 0 0 0 3px rgba(107,63,34,0.08);
+  }
+  textarea { resize: vertical; min-height: 75px; line-height: 1.6; }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%237A6555' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 14px center;
+    padding-right: 36px; cursor: pointer;
+  }
+
+  .star-picker { display: flex; gap: 6px; padding: 4px 0; }
+  .star-btn {
+    font-size: 26px; background: none; border: none; cursor: pointer;
+    color: var(--star-empty); transition: transform 0.12s, color 0.12s;
+    padding: 0; line-height: 1; user-select: none;
+  }
+  .star-btn:hover, .star-btn.lit { color: var(--star-active); }
+  .star-btn:hover { transform: scale(1.2); }
+
+  .sub-scores { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; }
+  .sub-field { display: flex; flex-direction: column; gap: 5px; }
+  .sub-stars { display: flex; gap: 3px; }
+  .sub-star {
+    font-size: 18px; background: none; border: none; cursor: pointer;
+    color: var(--star-empty); padding: 0; line-height: 1;
+    transition: color 0.1s, transform 0.1s; user-select: none;
+  }
+  .sub-star:hover, .sub-star.lit { color: var(--star-active); }
+  .sub-star:hover { transform: scale(1.15); }
+
+  .submit-row { margin-top: 1.5rem; display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .btn-submit {
+    font-family: 'DM Sans', sans-serif; font-size: 14px; font-weight: 500;
+    color: #FFF8EE; background: var(--espresso); border: none;
+    border-radius: 9px; padding: 12px 30px; cursor: pointer;
+    transition: opacity 0.15s, transform 0.12s; letter-spacing: 0.03em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .btn-submit:hover { opacity: 0.86; }
+  .btn-submit:active { transform: scale(0.97); }
+  .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+  .spinner {
+    width: 14px; height: 14px; border: 2px solid rgba(255,248,238,0.3);
+    border-top-color: #FFF8EE; border-radius: 50%;
+    animation: spin 0.7s linear infinite; display: none;
+  }
+  .btn-submit.loading .spinner { display: block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .form-note { font-size: 12px; color: var(--muted); }
+
+  .empty {
+    text-align: center; padding: 4rem 1rem; color: var(--muted);
+    font-style: italic; font-size: 15px;
+    border: 1px dashed var(--border); border-radius: 14px;
+  }
+
+  /* ─── TOAST ──────────────────────────────── */
+  #toast {
+    position: fixed; bottom: 2rem; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--espresso); color: #FFF8EE;
+    font-family: 'DM Sans', sans-serif; font-size: 14px;
+    padding: 12px 26px; border-radius: 99px; opacity: 0;
+    transition: all 0.3s cubic-bezier(0.34,1.56,0.64,1);
+    pointer-events: none; z-index: 9999; white-space: nowrap;
+    box-shadow: 0 8px 30px rgba(44,26,14,0.25);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  #toast.error { background: #8B2020; }
+
+  footer {
+    text-align: center; padding: 2rem; font-size: 13px; color: var(--muted);
+    border-top: 1px solid var(--border);
+  }
+  footer em { font-family: 'Playfair Display', serif; font-style: italic; color: var(--cocoa); }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .sub-scores { grid-template-columns: 1fr; }
+    header { padding: 2.5rem 1.25rem 1.75rem; }
+    .header-stats { gap: 1.5rem; }
+    main { padding: 2rem 1rem 4rem; }
+    .form-card { padding: 1.5rem 1.25rem; }
+    .card { grid-template-columns: 28px 1fr auto; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="header-tag">Bengaluru's Guide to</p>
+  <h1>The Perfect<br><em>Tiramisù</em></h1>
+  <p>Honest ratings from dessert obsessives, for dessert obsessives.</p>
+  <div class="header-stats">
+    <div class="stat"><div class="stat-num" id="stat-places">—</div><div class="stat-label">Places</div></div>
+    <div class="stat"><div class="stat-num" id="stat-reviews">—</div><div class="stat-label">Reviews</div></div>
+    <div class="stat"><div class="stat-num" id="stat-avg">—</div><div class="stat-label">Avg Score</div></div>
+  </div>
+  <div class="header-cta"><a href="#rate">Rate a tiramisù ↓</a></div>
+</header>
+
+<main>
+  <div id="config-banner" class="config-banner">
+    ⚠️ Supabase is not configured. Open the file and replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code> near the top of the &lt;script&gt; tag with your project credentials.
+  </div>
+
+  <div class="section-head">
+    <h2>Ranked list</h2>
+    <span id="place-count">loading…</span>
+  </div>
+
+  <div class="controls">
+    <button class="pill active" data-sort="rating">Highest rated</button>
+    <button class="pill" data-sort="recent">Most recent</button>
+    <button class="pill" data-sort="reviews">Most reviewed</button>
+  </div>
+
+  <div class="cards" id="cards-list">
+    <div class="skeleton"><div class="skel-line" style="width:55%"></div><div class="skel-line" style="width:35%"></div><div class="skel-line" style="width:80%"></div></div>
+    <div class="skeleton"><div class="skel-line" style="width:45%"></div><div class="skel-line" style="width:30%"></div><div class="skel-line" style="width:70%"></div></div>
+    <div class="skeleton"><div class="skel-line" style="width:60%"></div><div class="skel-line" style="width:40%"></div><div class="skel-line" style="width:75%"></div></div>
+  </div>
+
+  <div class="divider"><span>add a new place</span></div>
+
+  <div class="form-card" id="rate">
+    <h2>Rate a Tiramisù</h2>
+    <p>Found somewhere worth documenting? Tell the city.</p>
+    <div class="form-grid">
+      <div class="field">
+        <label>Restaurant name</label>
+        <input type="text" id="f-name" placeholder="e.g. Matteo's Bistro" />
+      </div>
+      <div class="field">
+        <label>Neighbourhood</label>
+        <input type="text" id="f-hood" placeholder="e.g. Indiranagar" />
+      </div>
+      <div class="field full">
+        <label>Overall rating</label>
+        <div class="star-picker" id="star-picker">
+          <button class="star-btn" data-v="1">★</button>
+          <button class="star-btn" data-v="2">★</button>
+          <button class="star-btn" data-v="3">★</button>
+          <button class="star-btn" data-v="4">★</button>
+          <button class="star-btn" data-v="5">★</button>
+        </div>
+      </div>
+      <div class="field full">
+        <label>Detailed scores</label>
+        <div class="sub-scores">
+          <div class="sub-field">
+            <label>Espresso soak</label>
+            <div class="sub-stars" id="sub-espresso">
+              <button class="sub-star" data-v="1">★</button><button class="sub-star" data-v="2">★</button>
+              <button class="sub-star" data-v="3">★</button><button class="sub-star" data-v="4">★</button>
+              <button class="sub-star" data-v="5">★</button>
+            </div>
+          </div>
+          <div class="sub-field">
+            <label>Mascarpone</label>
+            <div class="sub-stars" id="sub-mascarpone">
+              <button class="sub-star" data-v="1">★</button><button class="sub-star" data-v="2">★</button>
+              <button class="sub-star" data-v="3">★</button><button class="sub-star" data-v="4">★</button>
+              <button class="sub-star" data-v="5">★</button>
+            </div>
+          </div>
+          <div class="sub-field">
+            <label>Cocoa dusting</label>
+            <div class="sub-stars" id="sub-cocoa">
+              <button class="sub-star" data-v="1">★</button><button class="sub-star" data-v="2">★</button>
+              <button class="sub-star" data-v="3">★</button><button class="sub-star" data-v="4">★</button>
+              <button class="sub-star" data-v="5">★</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="field full">
+        <label>Tasting notes</label>
+        <textarea id="f-notes" placeholder="Describe the experience — texture, balance, temperature, presentation…"></textarea>
+      </div>
+      <div class="field">
+        <label>Style</label>
+        <select id="f-tag">
+          <option value="Classic">Classic</option>
+          <option value="Modern twist">Modern twist</option>
+          <option value="Boozy">Boozy</option>
+          <option value="Light & airy">Light &amp; airy</option>
+          <option value="Dense & rich">Dense &amp; rich</option>
+          <option value="Vegan">Vegan</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Approx. price</label>
+        <input type="text" id="f-price" placeholder="e.g. ₹350" />
+      </div>
+    </div>
+    <div class="submit-row">
+      <button class="btn-submit" id="submit-btn" onclick="submitReview()">
+        <div class="spinner"></div>
+        <span class="btn-label">Submit rating</span>
+      </button>
+      <span class="form-note">Ratings are shared live with everyone in the city.</span>
+    </div>
+  </div>
+</main>
+
+<footer>
+  Built with love for Bengaluru's dessert obsessives &nbsp;·&nbsp; <em>Tiramisù</em> forever
+</footer>
+
+<div id="toast"></div>
+
+<script>
+  /* ─────────────────────────────────────────────────────
+     👇  PASTE YOUR SUPABASE CREDENTIALS HERE
+  ───────────────────────────────────────────────────── */
+  const SUPABASE_URL      = 'https://hhelxmxwpadkaiqoccwg.supabase.co';
+  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoZWx4bXh3cGFka2FpcW9jY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjEwMjgsImV4cCI6MjA5MjkzNzAyOH0.yrsjcsmiw3eyeIsOwdWiOr2P514L09haovHiFfScM20';
+  /* ─────────────────────────────────────────────────── */
+
+  const configured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
+  if (!configured) document.getElementById('config-banner').style.display = 'block';
+
+  const { createClient } = supabase;
+  const db = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+
+  let entries     = [];
+  let currentSort = 'rating';
+  let mainRating  = 0;
+  const subRatings = { espresso: 0, mascarpone: 0, cocoa: 0 };
+
+  /* ── Helpers ── */
+  function esc(s) {
+    if (!s) return '';
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function starsHtml(score, max = 5) {
+    let s = '';
+    for (let i = 1; i <= max; i++) s += `<span class="star ${i <= Math.round(score) ? 'on' : 'off'}">★</span>`;
+    return s;
+  }
+
+  function sortedEntries() {
+    const copy = [...entries];
+    if (currentSort === 'rating')  return copy.sort((a,b) => b.rating - a.rating);
+    if (currentSort === 'recent')  return copy.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    if (currentSort === 'reviews') return copy.sort((a,b) => (b.review_count||1) - (a.review_count||1));
+    return copy;
+  }
+
+  /* ── Render ── */
+  function render() {
+    const list   = document.getElementById('cards-list');
+    const sorted = sortedEntries();
+
+    document.getElementById('stat-places').textContent  = entries.length;
+    document.getElementById('place-count').textContent  = `${entries.length} place${entries.length !== 1 ? 's' : ''}`;
+    const totalReviews = entries.reduce((s,e) => s + (e.review_count || 1), 0);
+    document.getElementById('stat-reviews').textContent = totalReviews;
+    if (entries.length > 0) {
+      const avg = entries.reduce((s,e) => s + parseFloat(e.rating), 0) / entries.length;
+      document.getElementById('stat-avg').textContent = avg.toFixed(1);
+    } else {
+      document.getElementById('stat-avg').textContent = '—';
+    }
+
+    if (sorted.length === 0) {
+      list.innerHTML = '<div class="empty">No places yet — be the first to rate one below.</div>';
+      return;
+    }
+
+    list.innerHTML = sorted.map((e, i) => {
+      const rank  = i + 1;
+      const isTop = rank <= 3;
+      const subParts = [];
+      if (e.sub_espresso)   subParts.push(`Espresso ${e.sub_espresso}/5`);
+      if (e.sub_mascarpone) subParts.push(`Mascarpone ${e.sub_mascarpone}/5`);
+      if (e.sub_cocoa)      subParts.push(`Cocoa ${e.sub_cocoa}/5`);
+      const reviewText = e.review_count > 1 ? `${e.review_count} ratings` : '1 rating';
+
+      return `<div class="card" style="animation-delay:${i * 0.045}s">
+        <div class="rank ${isTop ? 'top' : ''}">${rank}</div>
+        <div class="card-body">
+          <div class="card-name">${esc(e.name)}</div>
+          <div class="card-place">${esc(e.hood)}${e.price ? ' &nbsp;·&nbsp; ' + esc(e.price) : ''} &nbsp;·&nbsp; ${reviewText}</div>
+          ${e.notes ? `<div class="card-notes">"${esc(e.notes)}"</div>` : ''}
+          <div class="card-meta">
+            ${e.tag ? `<span class="tag">${esc(e.tag)}</span>` : ''}
+            ${subParts.length ? `<span class="sub-detail">${subParts.join(' &middot; ')}</span>` : ''}
+          </div>
+        </div>
+        <div class="card-score">
+          <div class="score-num">${parseFloat(e.rating).toFixed(1)}</div>
+          <div class="score-denom">/ 5</div>
+          <div class="stars-row">${starsHtml(e.rating)}</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  /* ── Toast ── */
+  function toast(msg, isError = false) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.className   = isError ? 'error' : '';
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 3000);
+  }
+
+  /* ── Load from Supabase ── */
+  async function loadData() {
+    if (!db) {
+      document.getElementById('cards-list').innerHTML =
+        '<div class="empty">Configure Supabase credentials to see ratings.</div>';
+      document.getElementById('place-count').textContent = '0 places';
+      ['stat-places','stat-reviews'].forEach(id => document.getElementById(id).textContent = '0');
+      return;
+    }
+
+    const { data, error } = await db.from('ratings').select('*').order('rating', { ascending: false });
+
+    if (error) {
+      toast('Could not load ratings: ' + error.message, true);
+      document.getElementById('cards-list').innerHTML =
+        '<div class="empty">Failed to load — check your Supabase credentials and table name.</div>';
+      return;
+    }
+
+    entries = data || [];
+    render();
+  }
+
+  /* ── Submit ── */
+  async function submitReview() {
+    if (!db) { toast('Supabase not configured.', true); return; }
+
+    const name  = document.getElementById('f-name').value.trim();
+    const hood  = document.getElementById('f-hood').value.trim();
+    const notes = document.getElementById('f-notes').value.trim();
+    const tag   = document.getElementById('f-tag').value;
+    const price = document.getElementById('f-price').value.trim();
+
+    if (!name)       { toast('Please enter a restaurant name.', true); return; }
+    if (!hood)       { toast('Please enter a neighbourhood.', true); return; }
+    if (!mainRating) { toast('Please give an overall star rating.', true); return; }
+
+    const btn = document.getElementById('submit-btn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    /* Check if this place already exists */
+    const { data: existing } = await db
+      .from('ratings')
+      .select('*')
+      .ilike('name', name)
+      .ilike('hood', hood)
+      .maybeSingle();
+
+    let dbError;
+
+    if (existing) {
+      /* Roll the rating into the existing row's average */
+      const n         = (existing.review_count || 1) + 1;
+      const newRating = parseFloat(((existing.rating * (n - 1) + mainRating) / n).toFixed(2));
+      const update    = {
+        rating:         newRating,
+        review_count:   n,
+        sub_espresso:   subRatings.espresso   || existing.sub_espresso,
+        sub_mascarpone: subRatings.mascarpone || existing.sub_mascarpone,
+        sub_cocoa:      subRatings.cocoa      || existing.sub_cocoa,
+      };
+      if (notes) update.notes = notes;
+
+      const res = await db.from('ratings').update(update).eq('id', existing.id);
+      dbError = res.error;
+      if (!dbError) toast('Rating added — average updated!');
+    } else {
+      /* Brand new place */
+      const res = await db.from('ratings').insert({
+        name, hood, notes, tag, price,
+        rating:         mainRating,
+        review_count:   1,
+        sub_espresso:   subRatings.espresso   || null,
+        sub_mascarpone: subRatings.mascarpone || null,
+        sub_cocoa:      subRatings.cocoa      || null,
+      });
+      dbError = res.error;
+      if (!dbError) toast('Tiramisù rated! Thank you.');
+    }
+
+    btn.classList.remove('loading');
+    btn.disabled = false;
+
+    if (dbError) { toast('Error saving: ' + dbError.message, true); return; }
+
+    resetForm();
+    await loadData();
+  }
+
+  /* ── Reset form ── */
+  function resetForm() {
+    ['f-name','f-hood','f-notes','f-price'].forEach(id => document.getElementById(id).value = '');
+    mainRating = 0;
+    subRatings.espresso = subRatings.mascarpone = subRatings.cocoa = 0;
+    setStars('star-picker',    0, '.star-btn');
+    setStars('sub-espresso',   0, '.sub-star');
+    setStars('sub-mascarpone', 0, '.sub-star');
+    setStars('sub-cocoa',      0, '.sub-star');
+  }
+
+  function setStars(containerId, val, selector) {
+    document.querySelectorAll(`#${containerId} ${selector}`).forEach(b => {
+      b.classList.toggle('lit', parseInt(b.dataset.v) <= val);
+    });
+  }
+
+  /* ── Star picker events ── */
+  document.getElementById('star-picker').addEventListener('click', e => {
+    const btn = e.target.closest('.star-btn');
+    if (!btn) return;
+    mainRating = parseInt(btn.dataset.v);
+    setStars('star-picker', mainRating, '.star-btn');
+  });
+
+  [['sub-espresso','espresso'],['sub-mascarpone','mascarpone'],['sub-cocoa','cocoa']].forEach(([id,key]) => {
+    document.getElementById(id).addEventListener('click', e => {
+      const btn = e.target.closest('.sub-star');
+      if (!btn) return;
+      subRatings[key] = parseInt(btn.dataset.v);
+      setStars(id, subRatings[key], '.sub-star');
+    });
+  });
+
+  /* ── Sort pills ── */
+  document.querySelectorAll('.pill').forEach(p => {
+    p.addEventListener('click', () => {
+      document.querySelectorAll('.pill').forEach(x => x.classList.remove('active'));
+      p.classList.add('active');
+      currentSort = p.dataset.sort;
+      render();
+    });
+  });
+
+  /* ── Realtime: auto-refresh when any user submits ── */
+  function subscribeRealtime() {
+    if (!db) return;
+    db.channel('ratings-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ratings' }, () => {
+        loadData();
+      })
+      .subscribe();
+  }
+
+  /* ── Boot ── */
+  loadData().then(() => subscribeRealtime());
+</script>
+</body>
+</html>
