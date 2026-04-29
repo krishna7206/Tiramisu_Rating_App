@@ -298,7 +298,7 @@
     <button class="currency-btn" data-currency="INR" data-symbol="₹" data-flag="🇮🇳">🇮🇳 INR</button>
     <button class="currency-btn" data-currency="AUD" data-symbol="A$" data-flag="🇦🇺">🇦🇺 AUD</button>
     <button class="currency-btn" data-currency="CAD" data-symbol="CA$" data-flag="🇨🇦">🇨🇦 CAD</button>
-    <button class="currency-btn" data-currency="USD" data-symbol="$" data-flag="🇺🇸">🇺🇸 USD</button>
+    <button class="currency-btn" data-currency="GLOBAL" data-symbol="" data-flag="🌍">🌍 Global</button>
   </div>
   <div class="header-cta"><a href="#rate">Rate a tiramisù ↓</a></div>
 </header>
@@ -438,13 +438,13 @@
 
   /* ── Currency & Exchange Rates ── */
   const CURRENCIES = {
-    INR: { symbol: '₹',   label: 'INR', decimals: 0, city: 'Bengaluru' },
-    AUD: { symbol: 'A$',  label: 'AUD', decimals: 2, city: 'Sydney'    },
-    CAD: { symbol: 'CA$', label: 'CAD', decimals: 2, city: 'Toronto'   },
-    USD: { symbol: '$',   label: 'USD', decimals: 2, city: 'Undecided'    },
+    INR:    { symbol: '₹',   label: 'INR',    decimals: 0, city: 'Bengaluru' },
+    AUD:    { symbol: 'A$',  label: 'AUD',    decimals: 2, city: 'Sydney'    },
+    CAD:    { symbol: 'CA$', label: 'CAD',    decimals: 2, city: 'Toronto'   },
+    GLOBAL: { symbol: '₹',   label: 'Global', decimals: 0, city: 'Global'    },
   };
 
-  let activeCurrency = localStorage.getItem('tiramisu_currency') || 'INR';
+  let activeCurrency = ['INR','AUD','CAD','GLOBAL'].includes(localStorage.getItem('tiramisu_currency')) ? localStorage.getItem('tiramisu_currency') : 'INR';
   let fxRates = { INR: 1 }; /* rates relative to INR, populated on boot */
   let fxLoaded = false;
 
@@ -453,13 +453,13 @@
       /* Free tier — no API key required, based on INR */
       const res  = await fetch('https://api.exchangerate-api.com/v4/latest/INR');
       const data = await res.json();
-      fxRates  = data.rates; /* { AUD: 0.018, CAD: 0.016, USD: 0.012, INR: 1, ... } */
+      fxRates  = data.rates;
       fxLoaded = true;
       /* Re-render now that we have real rates */
       render();
     } catch(err) {
       /* Fallback hardcoded rates if API is unavailable */
-      fxRates  = { INR: 1, AUD: 0.018, CAD: 0.016, USD: 0.012 };
+      fxRates  = { INR: 1, AUD: 0.018, CAD: 0.016, GLOBAL: 1 };
       fxLoaded = true;
       render();
     }
@@ -498,7 +498,7 @@
         document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
         updateHeaderCity();
         /* sync city form dropdown to match selected currency */
-        const currencyToCity = { INR: 'Bengaluru', AUD: 'Sydney', CAD: 'Toronto', USD: 'Bengaluru' };
+        const currencyToCity = { INR: 'Bengaluru', AUD: 'Sydney', CAD: 'Toronto', GLOBAL: 'Bengaluru' };
         const cityEl = document.getElementById('f-city');
         if (cityEl) cityEl.value = currencyToCity[activeCurrency];
         render();
@@ -528,9 +528,7 @@
 
   function sortedEntries() {
     const { city } = CURRENCIES[activeCurrency];
-    const filtered = city === 'Global'
-      ? [...entries]
-      : entries.filter(e => e.city === city);
+    const filtered = city === 'Global' ? [...entries] : entries.filter(e => e.city === city);
     if (currentSort === 'rating')  return filtered.sort((a,b) => b.rating - a.rating);
     if (currentSort === 'recent')  return filtered.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
     if (currentSort === 'reviews') return filtered.sort((a,b) => (b.review_count||1) - (a.review_count||1));
@@ -542,7 +540,7 @@
     const list   = document.getElementById('cards-list');
     const sorted = sortedEntries();
     const { city } = CURRENCIES[activeCurrency];
-    const cityLabel = city === 'Global' ? 'everywhere' : city;
+    const cityLabel = city === 'Global' ? 'all cities' : city;
 
     document.getElementById('stat-places').textContent  = sorted.length;
     document.getElementById('place-count').textContent  = `${sorted.length} place${sorted.length !== 1 ? 's' : ''} in ${cityLabel}`;
@@ -732,7 +730,7 @@
   });
 
   /* ── City → Currency auto-select ── */
-  const CITY_CURRENCY = { Bengaluru: 'INR', Sydney: 'AUD', Toronto: 'CAD' };
+  const CITY_CURRENCY = { Bengaluru: 'INR', Sydney: 'AUD', Toronto: 'CAD', Global: 'GLOBAL' };
   document.getElementById('f-city').addEventListener('change', e => {
     const mapped = CITY_CURRENCY[e.target.value];
     if (!mapped) return;
