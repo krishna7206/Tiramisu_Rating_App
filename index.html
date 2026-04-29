@@ -178,11 +178,21 @@
 
   /* ─── CONFIG BANNER ──────────────────────── */
   .config-banner {
-    background: #FFF3CD; border: 1px solid #f0d87c;
-    border-radius: 10px; padding: 1rem 1.25rem;
-    font-size: 13.5px; color: #7B6000; margin-bottom: 1.5rem; display: none;
+    background: #FFF8EE; border: 1px solid var(--gold);
+    border-radius: 14px; padding: 1.5rem 1.75rem;
+    margin-bottom: 1.75rem;
   }
-  .config-banner code { background: rgba(0,0,0,0.07); padding: 2px 6px; border-radius: 4px; font-size: 12px; }
+  .config-title { font-family: "Playfair Display", serif; font-size: 1.1rem; font-weight: 700; color: var(--espresso); margin-bottom: 0.35rem; }
+  .config-sub { font-size: 13px; color: var(--muted); margin-bottom: 1.1rem; }
+  .config-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+  .config-field { display: flex; flex-direction: column; gap: 5px; }
+  .config-field label { font-size: 11px; font-weight: 500; color: var(--muted); letter-spacing: 0.07em; text-transform: uppercase; }
+  .config-field input { font-family: "DM Sans", sans-serif; font-size: 13px; color: var(--text); background: var(--cream); border: 1px solid var(--border); border-radius: 8px; padding: 9px 12px; outline: none; transition: border-color 0.15s; width: 100%; }
+  .config-field input:focus { border-color: var(--cocoa); }
+  .config-connect-btn { font-family: "DM Sans", sans-serif; font-size: 13px; font-weight: 500; color: #FFF8EE; background: var(--espresso); border: none; border-radius: 8px; padding: 10px 24px; cursor: pointer; transition: opacity 0.15s; }
+  .config-connect-btn:hover { opacity: 0.85; }
+  .config-hint { font-size: 12px; color: var(--muted); margin-top: 0.75rem; }
+  @media (max-width: 600px) { .config-fields { grid-template-columns: 1fr; } }
 
   /* ─── FORM ───────────────────────────────── */
   .form-card {
@@ -312,8 +322,21 @@
 </header>
 
 <main>
-  <div id="config-banner" class="config-banner">
-    ⚠️ Supabase is not configured. Open the file and replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code> near the top of the &lt;script&gt; tag with your project credentials.
+  <div id="config-banner" class="config-banner" style="display:none;">
+    <div class="config-title">⚠️ Connect your Supabase project</div>
+    <p class="config-sub">Paste your credentials below — they are saved in your browser and never leave your device.</p>
+    <div class="config-fields">
+      <div class="config-field">
+        <label>Project URL</label>
+        <input type="text" id="cfg-url" placeholder="https://xxxx.supabase.co" autocomplete="off" spellcheck="false" />
+      </div>
+      <div class="config-field">
+        <label>Anon public key</label>
+        <input type="text" id="cfg-key" placeholder="eyJhbGci..." autocomplete="off" spellcheck="false" />
+      </div>
+    </div>
+    <button class="config-connect-btn" onclick="connectSupabase()">Connect</button>
+    <p class="config-hint">Find these in your Supabase project under <strong>Settings &rarr; API</strong>.</p>
   </div>
 
   <div class="section-head">
@@ -434,18 +457,47 @@
 <div id="toast"></div>
 
 <script>
-  /* ─────────────────────────────────────────────────────
-     👇  PASTE YOUR SUPABASE CREDENTIALS HERE
-  ───────────────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://hhelxmxwpadkaiqoccwg.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoZWx4bXh3cGFka2FpcW9jY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjEwMjgsImV4cCI6MjA5MjkzNzAyOH0.yrsjcsmiw3eyeIsOwdWiOr2P514L09haovHiFfScM20';
-  /* ─────────────────────────────────────────────────── */
-
-  const configured = SUPABASE_URL !== 'https://hhelxmxwpadkaiqoccwg.supabase.co';
-  if (!configured) document.getElementById('config-banner').style.display = 'block';
-
+  /* ── Supabase — credentials stored in localStorage ── */
   const { createClient } = supabase;
-  const db = configured ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY) : null;
+  let db = null;
+
+  function getStoredCreds() {
+    return {
+      url: localStorage.getItem('sb_url') || '',
+      key: localStorage.getItem('sb_key') || '',
+    };
+  }
+
+  function initDB() {
+    const { url, key } = getStoredCreds();
+    if (url && key && url.startsWith('https://') && key.startsWith('eyJ')) {
+      db = createClient(url, key);
+      document.getElementById('config-banner').style.display = 'none';
+      return true;
+    }
+    db = null;
+    document.getElementById('config-banner').style.display = 'block';
+    // Pre-fill inputs if creds exist but are invalid
+    if (url) document.getElementById('cfg-url').value = url;
+    if (key) document.getElementById('cfg-key').value = key;
+    return false;
+  }
+
+  function connectSupabase() {
+    const url = document.getElementById('cfg-url').value.trim().replace(/\/$/, '');
+    const key = document.getElementById('cfg-key').value.trim();
+    if (!url || !url.startsWith('https://')) {
+      alert('Please enter a valid Supabase URL (starts with https://)'); return;
+    }
+    if (!key || !key.startsWith('eyJ')) {
+      alert('Please enter a valid anon key (starts with eyJ...)'); return;
+    }
+    localStorage.setItem('sb_url', url);
+    localStorage.setItem('sb_key', key);
+    if (initDB()) {
+      loadData().then(() => subscribeRealtime());
+    }
+  }
 
   let entries     = [];
   let currentSort = 'rating';
@@ -765,8 +817,10 @@
 
   /* ── Boot ── */
   initCurrencySwitcher();
-  loadExchangeRates(); /* fetch live FX rates, then re-renders */
-  loadData().then(() => subscribeRealtime());
+  loadExchangeRates();
+  if (initDB()) {
+    loadData().then(() => subscribeRealtime());
+  }
 </script>
 </body>
 </html>
