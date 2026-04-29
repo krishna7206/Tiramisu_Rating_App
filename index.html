@@ -286,7 +286,7 @@
 <body>
 
 <header>
-  <p class="header-tag" id="header-city-tag">Bengaluru's Guide to</p>
+  <p class="header-tag" id="header-city-tag">Our Guide to</p>
   <h1>The Perfect<br><em>Tiramisù</em></h1>
   <p>Honest ratings from dessert obsessives, for dessert obsessives.</p>
   <div class="header-stats">
@@ -511,7 +511,7 @@
   function updateHeaderCity() {
     const { city } = CURRENCIES[activeCurrency];
     document.getElementById('header-city-tag').textContent =
-      city === 'Global' ? 'A Global Guide to' : `${city}'s Guide to`;
+      city === 'Global' ? 'Our Guide to' : `${city}'s Guide to`;
   }
 
   /* ── Helpers ── */
