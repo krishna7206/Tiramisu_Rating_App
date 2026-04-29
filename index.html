@@ -145,6 +145,11 @@
   .card-notes { font-size: 13.5px; color: var(--cocoa); font-style: italic; line-height: 1.55; margin-bottom: 10px; }
   .card-meta { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
   .tag { font-size: 11px; padding: 3px 11px; border-radius: 99px; background: var(--dust); color: var(--cocoa); font-weight: 500; letter-spacing: 0.03em; }
+  .price-badge {
+    font-size: 12px; font-weight: 600; padding: 3px 10px;
+    border-radius: 99px; background: var(--espresso); color: var(--gold);
+    letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
+  }
   .sub-detail { font-size: 12px; color: var(--muted); }
   .card-score { text-align: right; min-width: 60px; }
   .score-num { font-family: 'Playfair Display', serif; font-size: 2.1rem; font-weight: 700; color: var(--espresso); line-height: 1; }
@@ -424,8 +429,8 @@
   /* ─────────────────────────────────────────────────────
      👇  PASTE YOUR SUPABASE CREDENTIALS HERE
   ───────────────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://hhelxmxwpadkaiqoccwg.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoZWx4bXh3cGFka2FpcW9jY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjEwMjgsImV4cCI6MjA5MjkzNzAyOH0.yrsjcsmiw3eyeIsOwdWiOr2P514L09haovHiFfScM20';
+  const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
   /* ─────────────────────────────────────────────────── */
 
   const configured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
@@ -560,10 +565,11 @@
         <div class="rank ${isTop ? 'top' : ''}">${rank}</div>
         <div class="card-body">
           <div class="card-name">${esc(e.name)}</div>
-          <div class="card-place">${esc(e.hood)}${formattedPrice ? ' &nbsp;·&nbsp; ' + formattedPrice : ''} &nbsp;·&nbsp; ${reviewText}</div>
+          <div class="card-place">${esc(e.hood)} &nbsp;·&nbsp; ${reviewText}</div>
           ${e.notes ? `<div class="card-notes">"${esc(e.notes)}"</div>` : ''}
           <div class="card-meta">
             ${e.tag ? `<span class="tag">${esc(e.tag)}</span>` : ''}
+            ${formattedPrice ? `<span class="price-badge">${formattedPrice}</span>` : ''}
             ${subParts.length ? `<span class="sub-detail">${subParts.join(' &middot; ')}</span>` : ''}
           </div>
         </div>
