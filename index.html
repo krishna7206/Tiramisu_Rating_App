@@ -497,6 +497,10 @@
         btn.classList.add('active');
         document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
         updateHeaderCity();
+        /* sync city form dropdown to match selected currency */
+        const currencyToCity = { INR: 'Bengaluru', AUD: 'Sydney', CAD: 'Toronto', USD: 'Bengaluru' };
+        const cityEl = document.getElementById('f-city');
+        if (cityEl) cityEl.value = currencyToCity[activeCurrency];
         render();
       });
     });
@@ -727,19 +731,20 @@
     });
   });
 
- const CITY_CURRENCY = { Bengaluru: 'INR', Sydney: 'AUD', Toronto: 'CAD' };
-document.getElementById('f-city').addEventListener('change', e => {
-  const mapped = CITY_CURRENCY[e.target.value];
-  if (!mapped) return;
-  activeCurrency = mapped;
-  localStorage.setItem('tiramisu_currency', mapped);
-  document.querySelectorAll('.currency-btn').forEach(b => {
-    b.classList.toggle('active', b.dataset.currency === mapped);
+  /* ── City → Currency auto-select ── */
+  const CITY_CURRENCY = { Bengaluru: 'INR', Sydney: 'AUD', Toronto: 'CAD' };
+  document.getElementById('f-city').addEventListener('change', e => {
+    const mapped = CITY_CURRENCY[e.target.value];
+    if (!mapped) return;
+    activeCurrency = mapped;
+    localStorage.setItem('tiramisu_currency', mapped);
+    document.querySelectorAll('.currency-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.currency === mapped);
+    });
+    document.getElementById('price-symbol').textContent = CURRENCIES[mapped].symbol;
+    updateHeaderCity();
+    render();
   });
-  document.getElementById('price-symbol').textContent = CURRENCIES[mapped].symbol;
-  updateHeaderCity();
-  render();
-});
 
   /* ── Sort pills ── */
   document.querySelectorAll('.pill').forEach(p => {
