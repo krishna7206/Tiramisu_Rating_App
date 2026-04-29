@@ -424,8 +424,8 @@
   /* ─────────────────────────────────────────────────────
      👇  PASTE YOUR SUPABASE CREDENTIALS HERE
   ───────────────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://hhelxmxwpadkaiqoccwg.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoZWx4bXh3cGFka2FpcW9jY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjEwMjgsImV4cCI6MjA5MjkzNzAyOH0.yrsjcsmiw3eyeIsOwdWiOr2P514L09haovHiFfScM20';
+  const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
   /* ─────────────────────────────────────────────────── */
 
   const configured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
@@ -439,14 +439,56 @@
   let mainRating  = 0;
   const subRatings = { espresso: 0, mascarpone: 0, cocoa: 0 };
 
-  /* ── Currency ── */
+  /* ── Currency & Exchange Rates ── */
   const CURRENCIES = {
-    INR: { symbol: '₹',  label: 'INR', flag: '🇮🇳' },
-    AUD: { symbol: 'A$', label: 'AUD', flag: '🇦🇺' },
-    CAD: { symbol: 'CA$',label: 'CAD', flag: '🇨🇦' },
-    USD: { symbol: '$',  label: 'USD', flag: '🇺🇸' },
+    INR: { symbol: '₹',   label: 'INR', decimals: 0 },
+    AUD: { symbol: 'A$',  label: 'AUD', decimals: 2 },
+    CAD: { symbol: 'CA$', label: 'CAD', decimals: 2 },
+    USD: { symbol: '$',   label: 'USD', decimals: 2 },
   };
+
   let activeCurrency = localStorage.getItem('tiramisu_currency') || 'INR';
+  let fxRates = { INR: 1 }; /* rates relative to INR, populated on boot */
+  let fxLoaded = false;
+
+  async function loadExchangeRates() {
+    try {
+      /* Free tier — no API key required, based on INR */
+      const res  = await fetch('https://api.exchangerate-api.com/v4/latest/INR');
+      const data = await res.json();
+      fxRates  = data.rates; /* { AUD: 0.018, CAD: 0.016, USD: 0.012, INR: 1, ... } */
+      fxLoaded = true;
+      /* Re-render now that we have real rates */
+      render();
+    } catch(err) {
+      /* Fallback hardcoded rates if API is unavailable */
+      fxRates  = { INR: 1, AUD: 0.018, CAD: 0.016, USD: 0.012 };
+      fxLoaded = true;
+      render();
+    }
+  }
+
+  function convertFromINR(inrAmount) {
+    if (!inrAmount || isNaN(inrAmount)) return null;
+    const rate = fxRates[activeCurrency] || 1;
+    return inrAmount * rate;
+  }
+
+  function toINR(amount) {
+    /* Convert any entered amount (in activeCurrency) back to INR for storage */
+    if (!amount || isNaN(amount)) return null;
+    const rate = fxRates[activeCurrency] || 1;
+    return Math.round(amount / rate);
+  }
+
+  function formatPrice(priceInr) {
+    if (!priceInr || isNaN(priceInr)) return null;
+    if (!fxLoaded) return '…'; /* loading */
+    const converted = convertFromINR(parseFloat(priceInr));
+    if (converted === null) return null;
+    const { symbol, decimals } = CURRENCIES[activeCurrency];
+    return symbol + converted.toFixed(decimals);
+  }
 
   function initCurrencySwitcher() {
     document.querySelectorAll('.currency-btn').forEach(btn => {
@@ -460,16 +502,7 @@
         render();
       });
     });
-    /* Set initial symbol */
     document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
-  }
-
-  function formatPrice(rawPrice) {
-    if (!rawPrice) return null;
-    /* If stored price already has a symbol prefix, strip it and re-apply active one */
-    const numeric = rawPrice.replace(/[^0-9.,]/g, '').trim();
-    if (!numeric) return esc(rawPrice);
-    return esc(CURRENCIES[activeCurrency].symbol + numeric);
   }
 
   /* ── Helpers ── */
@@ -522,7 +555,7 @@
       if (e.sub_cocoa)      subParts.push(`Cocoa ${e.sub_cocoa}/5`);
       const reviewText = e.review_count > 1 ? `${e.review_count} ratings` : '1 rating';
 
-      const formattedPrice = formatPrice(e.price);
+      const formattedPrice = e.price_inr ? formatPrice(e.price_inr) : null;
       return `<div class="card" style="animation-delay:${i * 0.045}s">
         <div class="rank ${isTop ? 'top' : ''}">${rank}</div>
         <div class="card-body">
@@ -584,7 +617,7 @@
     const notes = document.getElementById('f-notes').value.trim();
     const tag   = document.getElementById('f-tag').value;
     const priceRaw  = document.getElementById('f-price').value.trim();
-    const price     = priceRaw ? CURRENCIES[activeCurrency].symbol + priceRaw : '';
+    const priceInr  = priceRaw ? toINR(parseFloat(priceRaw)) : null;
 
     if (!name)       { toast('Please enter a restaurant name.', true); return; }
     if (!hood)       { toast('Please enter a neighbourhood.', true); return; }
@@ -615,6 +648,7 @@
         sub_mascarpone: subRatings.mascarpone || existing.sub_mascarpone,
         sub_cocoa:      subRatings.cocoa      || existing.sub_cocoa,
       };
+      if (priceInr)  update.price_inr = priceInr;
       if (notes) update.notes = notes;
 
       const res = await db.from('ratings').update(update).eq('id', existing.id);
@@ -623,7 +657,8 @@
     } else {
       /* Brand new place */
       const res = await db.from('ratings').insert({
-        name, hood, notes, tag, price,
+        name, hood, notes, tag,
+        price_inr:      priceInr,
         rating:         mainRating,
         review_count:   1,
         sub_espresso:   subRatings.espresso   || null,
@@ -699,6 +734,7 @@
 
   /* ── Boot ── */
   initCurrencySwitcher();
+  loadExchangeRates(); /* fetch live FX rates, then re-renders */
   loadData().then(() => subscribeRealtime());
 </script>
 </body>
