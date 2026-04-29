@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Tiramisù  — Find the City's Best</title>
+<title>Tiramisù — Find the City's Best</title>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400;1,700&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
@@ -73,6 +73,24 @@
   .stat { text-align: center; }
   .stat-num { font-family: 'Playfair Display', serif; font-size: 2rem; color: var(--gold); font-weight: 700; line-height: 1; }
   .stat-label { font-size: 11px; color: rgba(255,248,238,0.4); letter-spacing: 0.12em; margin-top: 4px; text-transform: uppercase; }
+  /* ─── CURRENCY SWITCHER ──────────────────── */
+  .currency-switcher {
+    display: flex; justify-content: center; gap: 6px;
+    margin-top: 1.5rem; flex-wrap: wrap;
+    opacity: 0; animation: fadeDown 0.6s 0.45s ease forwards;
+  }
+  .currency-btn {
+    font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 500;
+    letter-spacing: 0.06em; padding: 5px 14px; border-radius: 99px;
+    border: 1px solid rgba(200,148,42,0.35); background: transparent;
+    color: rgba(255,248,238,0.55); cursor: pointer;
+    transition: all 0.15s;
+  }
+  .currency-btn:hover { border-color: var(--gold); color: var(--gold); }
+  .currency-btn.active {
+    background: rgba(200,148,42,0.18); border-color: var(--gold); color: var(--gold);
+  }
+
   .header-cta { margin-top: 1.75rem; opacity: 0; animation: fadeDown 0.6s 0.5s ease forwards; }
   .header-cta a {
     display: inline-block; font-size: 13px; font-weight: 500;
@@ -271,13 +289,19 @@
 <body>
 
 <header>
-  <p class="header-tag">Our Guide to</p>
+  <p class="header-tag">Bengaluru's Guide to</p>
   <h1>The Perfect<br><em>Tiramisù</em></h1>
   <p>Honest ratings from dessert obsessives, for dessert obsessives.</p>
   <div class="header-stats">
     <div class="stat"><div class="stat-num" id="stat-places">—</div><div class="stat-label">Places</div></div>
     <div class="stat"><div class="stat-num" id="stat-reviews">—</div><div class="stat-label">Reviews</div></div>
     <div class="stat"><div class="stat-num" id="stat-avg">—</div><div class="stat-label">Avg Score</div></div>
+  </div>
+  <div class="currency-switcher">
+    <button class="currency-btn" data-currency="INR" data-symbol="₹" data-flag="🇮🇳">🇮🇳 INR</button>
+    <button class="currency-btn" data-currency="AUD" data-symbol="A$" data-flag="🇦🇺">🇦🇺 AUD</button>
+    <button class="currency-btn" data-currency="CAD" data-symbol="CA$" data-flag="🇨🇦">🇨🇦 CAD</button>
+    <button class="currency-btn" data-currency="USD" data-symbol="$" data-flag="🇺🇸">🇺🇸 USD</button>
   </div>
   <div class="header-cta"><a href="#rate">Rate a tiramisù ↓</a></div>
 </header>
@@ -374,7 +398,10 @@
       </div>
       <div class="field">
         <label>Approx. price</label>
-        <input type="text" id="f-price" placeholder="e.g. ₹350" />
+        <div style="display:flex;gap:8px;align-items:center;">
+          <span id="price-symbol" style="font-size:15px;color:var(--muted);font-weight:500;white-space:nowrap;min-width:28px;">₹</span>
+          <input type="text" id="f-price" placeholder="e.g. 350" style="flex:1;" />
+        </div>
       </div>
     </div>
     <div class="submit-row">
@@ -388,7 +415,7 @@
 </main>
 
 <footer>
-  Built with love for Bengaluru's dessert obsessives &nbsp;·&nbsp; <em>Tiramisù</em> forever
+  Built with love for dessert obsessives in Bengaluru, Sydney &amp; Toronto &nbsp;·&nbsp; <em>Tiramisù</em> forever
 </footer>
 
 <div id="toast"></div>
@@ -397,8 +424,8 @@
   /* ─────────────────────────────────────────────────────
      👇  PASTE YOUR SUPABASE CREDENTIALS HERE
   ───────────────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://hhelxmxwpadkaiqoccwg.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoZWx4bXh3cGFka2FpcW9jY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjEwMjgsImV4cCI6MjA5MjkzNzAyOH0.yrsjcsmiw3eyeIsOwdWiOr2P514L09haovHiFfScM20';
+  const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
   /* ─────────────────────────────────────────────────── */
 
   const configured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
@@ -411,6 +438,39 @@
   let currentSort = 'rating';
   let mainRating  = 0;
   const subRatings = { espresso: 0, mascarpone: 0, cocoa: 0 };
+
+  /* ── Currency ── */
+  const CURRENCIES = {
+    INR: { symbol: '₹',  label: 'INR', flag: '🇮🇳' },
+    AUD: { symbol: 'A$', label: 'AUD', flag: '🇦🇺' },
+    CAD: { symbol: 'CA$',label: 'CAD', flag: '🇨🇦' },
+    USD: { symbol: '$',  label: 'USD', flag: '🇺🇸' },
+  };
+  let activeCurrency = localStorage.getItem('tiramisu_currency') || 'INR';
+
+  function initCurrencySwitcher() {
+    document.querySelectorAll('.currency-btn').forEach(btn => {
+      if (btn.dataset.currency === activeCurrency) btn.classList.add('active');
+      btn.addEventListener('click', () => {
+        activeCurrency = btn.dataset.currency;
+        localStorage.setItem('tiramisu_currency', activeCurrency);
+        document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
+        render();
+      });
+    });
+    /* Set initial symbol */
+    document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
+  }
+
+  function formatPrice(rawPrice) {
+    if (!rawPrice) return null;
+    /* If stored price already has a symbol prefix, strip it and re-apply active one */
+    const numeric = rawPrice.replace(/[^0-9.,]/g, '').trim();
+    if (!numeric) return esc(rawPrice);
+    return esc(CURRENCIES[activeCurrency].symbol + numeric);
+  }
 
   /* ── Helpers ── */
   function esc(s) {
@@ -462,11 +522,12 @@
       if (e.sub_cocoa)      subParts.push(`Cocoa ${e.sub_cocoa}/5`);
       const reviewText = e.review_count > 1 ? `${e.review_count} ratings` : '1 rating';
 
+      const formattedPrice = formatPrice(e.price);
       return `<div class="card" style="animation-delay:${i * 0.045}s">
         <div class="rank ${isTop ? 'top' : ''}">${rank}</div>
         <div class="card-body">
           <div class="card-name">${esc(e.name)}</div>
-          <div class="card-place">${esc(e.hood)}${e.price ? ' &nbsp;·&nbsp; ' + esc(e.price) : ''} &nbsp;·&nbsp; ${reviewText}</div>
+          <div class="card-place">${esc(e.hood)}${formattedPrice ? ' &nbsp;·&nbsp; ' + formattedPrice : ''} &nbsp;·&nbsp; ${reviewText}</div>
           ${e.notes ? `<div class="card-notes">"${esc(e.notes)}"</div>` : ''}
           <div class="card-meta">
             ${e.tag ? `<span class="tag">${esc(e.tag)}</span>` : ''}
@@ -522,7 +583,8 @@
     const hood  = document.getElementById('f-hood').value.trim();
     const notes = document.getElementById('f-notes').value.trim();
     const tag   = document.getElementById('f-tag').value;
-    const price = document.getElementById('f-price').value.trim();
+    const priceRaw  = document.getElementById('f-price').value.trim();
+    const price     = priceRaw ? CURRENCIES[activeCurrency].symbol + priceRaw : '';
 
     if (!name)       { toast('Please enter a restaurant name.', true); return; }
     if (!hood)       { toast('Please enter a neighbourhood.', true); return; }
@@ -636,6 +698,7 @@
   }
 
   /* ── Boot ── */
+  initCurrencySwitcher();
   loadData().then(() => subscribeRealtime());
 </script>
 </body>
