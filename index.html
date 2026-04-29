@@ -727,6 +727,20 @@
     });
   });
 
+ const CITY_CURRENCY = { Bengaluru: 'INR', Sydney: 'AUD', Toronto: 'CAD' };
+document.getElementById('f-city').addEventListener('change', e => {
+  const mapped = CITY_CURRENCY[e.target.value];
+  if (!mapped) return;
+  activeCurrency = mapped;
+  localStorage.setItem('tiramisu_currency', mapped);
+  document.querySelectorAll('.currency-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.currency === mapped);
+  });
+  document.getElementById('price-symbol').textContent = CURRENCIES[mapped].symbol;
+  updateHeaderCity();
+  render();
+});
+
   /* ── Sort pills ── */
   document.querySelectorAll('.pill').forEach(p => {
     p.addEventListener('click', () => {
