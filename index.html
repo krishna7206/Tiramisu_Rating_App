@@ -294,7 +294,7 @@
 <body>
 
 <header>
-  <p class="header-tag">Bengaluru's Guide to</p>
+  <p class="header-tag" id="header-city-tag">Bengaluru's Guide to</p>
   <h1>The Perfect<br><em>Tiramisù</em></h1>
   <p>Honest ratings from dessert obsessives, for dessert obsessives.</p>
   <div class="header-stats">
@@ -402,6 +402,14 @@
         </select>
       </div>
       <div class="field">
+        <label>City</label>
+        <select id="f-city">
+          <option value="Bengaluru">🇮🇳 Bengaluru</option>
+          <option value="Sydney">🇦🇺 Sydney</option>
+          <option value="Toronto">🇨🇦 Toronto</option>
+        </select>
+      </div>
+      <div class="field">
         <label>Approx. price</label>
         <div style="display:flex;gap:8px;align-items:center;">
           <span id="price-symbol" style="font-size:15px;color:var(--muted);font-weight:500;white-space:nowrap;min-width:28px;">₹</span>
@@ -429,8 +437,8 @@
   /* ─────────────────────────────────────────────────────
      👇  PASTE YOUR SUPABASE CREDENTIALS HERE
   ───────────────────────────────────────────────────── */
-  const SUPABASE_URL      = 'https://hhelxmxwpadkaiqoccwg.supabase.co';
-  const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhoZWx4bXh3cGFka2FpcW9jY3dnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzczNjEwMjgsImV4cCI6MjA5MjkzNzAyOH0.yrsjcsmiw3eyeIsOwdWiOr2P514L09haovHiFfScM20';
+  const SUPABASE_URL      = 'YOUR_SUPABASE_URL';
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY';
   /* ─────────────────────────────────────────────────── */
 
   const configured = SUPABASE_URL !== 'YOUR_SUPABASE_URL';
@@ -446,10 +454,10 @@
 
   /* ── Currency & Exchange Rates ── */
   const CURRENCIES = {
-    INR: { symbol: '₹',   label: 'INR', decimals: 0 },
-    AUD: { symbol: 'A$',  label: 'AUD', decimals: 2 },
-    CAD: { symbol: 'CA$', label: 'CAD', decimals: 2 },
-    USD: { symbol: '$',   label: 'USD', decimals: 2 },
+    INR: { symbol: '₹',   label: 'INR', decimals: 0, city: 'Bengaluru' },
+    AUD: { symbol: 'A$',  label: 'AUD', decimals: 2, city: 'Sydney'    },
+    CAD: { symbol: 'CA$', label: 'CAD', decimals: 2, city: 'Toronto'   },
+    USD: { symbol: '$',   label: 'USD', decimals: 2, city: 'Global'    },
   };
 
   let activeCurrency = localStorage.getItem('tiramisu_currency') || 'INR';
@@ -504,10 +512,18 @@
         document.querySelectorAll('.currency-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
+        updateHeaderCity();
         render();
       });
     });
     document.getElementById('price-symbol').textContent = CURRENCIES[activeCurrency].symbol;
+    updateHeaderCity();
+  }
+
+  function updateHeaderCity() {
+    const { city } = CURRENCIES[activeCurrency];
+    document.getElementById('header-city-tag').textContent =
+      city === 'Global' ? 'A Global Guide to' : `${city}'s Guide to`;
   }
 
   /* ── Helpers ── */
@@ -523,31 +539,36 @@
   }
 
   function sortedEntries() {
-    const copy = [...entries];
-    if (currentSort === 'rating')  return copy.sort((a,b) => b.rating - a.rating);
-    if (currentSort === 'recent')  return copy.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
-    if (currentSort === 'reviews') return copy.sort((a,b) => (b.review_count||1) - (a.review_count||1));
-    return copy;
+    const { city } = CURRENCIES[activeCurrency];
+    const filtered = city === 'Global'
+      ? [...entries]
+      : entries.filter(e => e.city === city);
+    if (currentSort === 'rating')  return filtered.sort((a,b) => b.rating - a.rating);
+    if (currentSort === 'recent')  return filtered.sort((a,b) => new Date(b.created_at) - new Date(a.created_at));
+    if (currentSort === 'reviews') return filtered.sort((a,b) => (b.review_count||1) - (a.review_count||1));
+    return filtered;
   }
 
   /* ── Render ── */
   function render() {
     const list   = document.getElementById('cards-list');
     const sorted = sortedEntries();
+    const { city } = CURRENCIES[activeCurrency];
+    const cityLabel = city === 'Global' ? 'everywhere' : city;
 
-    document.getElementById('stat-places').textContent  = entries.length;
-    document.getElementById('place-count').textContent  = `${entries.length} place${entries.length !== 1 ? 's' : ''}`;
-    const totalReviews = entries.reduce((s,e) => s + (e.review_count || 1), 0);
+    document.getElementById('stat-places').textContent  = sorted.length;
+    document.getElementById('place-count').textContent  = `${sorted.length} place${sorted.length !== 1 ? 's' : ''} in ${cityLabel}`;
+    const totalReviews = sorted.reduce((s,e) => s + (e.review_count || 1), 0);
     document.getElementById('stat-reviews').textContent = totalReviews;
-    if (entries.length > 0) {
-      const avg = entries.reduce((s,e) => s + parseFloat(e.rating), 0) / entries.length;
+    if (sorted.length > 0) {
+      const avg = sorted.reduce((s,e) => s + parseFloat(e.rating), 0) / sorted.length;
       document.getElementById('stat-avg').textContent = avg.toFixed(1);
     } else {
       document.getElementById('stat-avg').textContent = '—';
     }
 
     if (sorted.length === 0) {
-      list.innerHTML = '<div class="empty">No places yet — be the first to rate one below.</div>';
+      list.innerHTML = `<div class="empty">No places in ${cityLabel} yet — be the first to rate one below.</div>`;
       return;
     }
 
@@ -561,11 +582,12 @@
       const reviewText = e.review_count > 1 ? `${e.review_count} ratings` : '1 rating';
 
       const formattedPrice = e.price_inr ? formatPrice(e.price_inr) : null;
+      const cityFlag = { Bengaluru: '🇮🇳', Sydney: '🇦🇺', Toronto: '🇨🇦' }[e.city] || '';
       return `<div class="card" style="animation-delay:${i * 0.045}s">
         <div class="rank ${isTop ? 'top' : ''}">${rank}</div>
         <div class="card-body">
           <div class="card-name">${esc(e.name)}</div>
-          <div class="card-place">${esc(e.hood)} &nbsp;·&nbsp; ${reviewText}</div>
+          <div class="card-place">${cityFlag ? cityFlag + ' ' : ''}${esc(e.hood)} &nbsp;·&nbsp; ${reviewText}</div>
           ${e.notes ? `<div class="card-notes">"${esc(e.notes)}"</div>` : ''}
           <div class="card-meta">
             ${e.tag ? `<span class="tag">${esc(e.tag)}</span>` : ''}
@@ -622,6 +644,7 @@
     const hood  = document.getElementById('f-hood').value.trim();
     const notes = document.getElementById('f-notes').value.trim();
     const tag   = document.getElementById('f-tag').value;
+    const city  = document.getElementById('f-city').value;
     const priceRaw  = document.getElementById('f-price').value.trim();
     const priceInr  = priceRaw ? toINR(parseFloat(priceRaw)) : null;
 
@@ -655,7 +678,8 @@
         sub_cocoa:      subRatings.cocoa      || existing.sub_cocoa,
       };
       if (priceInr)  update.price_inr = priceInr;
-      if (notes) update.notes = notes;
+      if (city)      update.city      = city;
+      if (notes)     update.notes     = notes;
 
       const res = await db.from('ratings').update(update).eq('id', existing.id);
       dbError = res.error;
@@ -663,7 +687,7 @@
     } else {
       /* Brand new place */
       const res = await db.from('ratings').insert({
-        name, hood, notes, tag,
+        name, hood, notes, tag, city,
         price_inr:      priceInr,
         rating:         mainRating,
         review_count:   1,
@@ -687,6 +711,7 @@
   /* ── Reset form ── */
   function resetForm() {
     ['f-name','f-hood','f-notes','f-price'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('f-city').value = 'Bengaluru';
     mainRating = 0;
     subRatings.espresso = subRatings.mascarpone = subRatings.cocoa = 0;
     setStars('star-picker',    0, '.star-btn');
